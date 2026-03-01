@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("");
+declare_id!("GbYdmq8itoAjpmxWthKC3GeFDpLoWgmTTpcGM4vwVCAX");
 
 #[program]
 pub mod tienda_musica {
