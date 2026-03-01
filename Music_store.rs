@@ -1,127 +1,132 @@
-use anchor_lang::prelude::*; //Se utiliza el 100% de todos los casos
+use anchor_lang::prelude::*;
 
-declare_id!("5bVdMK7qMACeJiAjTxXpgYahdve6YFeR5GdBFNPHVNFd");
+declare_id!("");
 
-#[program] //Significa que el código va a ser usado en el programa
-pub mod biblioteca{
-    use super::*; //Exportar todo el código
+#[program]
+pub mod tienda_musica {
+    use super::*;
 
-    pub fn crear_biblioteca(context: Context<NuevaBiblioteca>, nombre: String) -> Result<()>{
+    pub fn crear_tienda(context: Context<NuevaTienda>, nombre: String) -> Result<()> {
         let owner_id = context.accounts.owner.key();
-        let libros: Vec<Libros> = Vec::new();
+        let canciones: Vec<Cancion> = Vec::new();
 
-        context.accounts.biblioteca.set_inner(Biblioteca {
+        context.accounts.tienda.set_inner(Tienda {
             owner: owner_id,
             nombre,
-            libros,
+            canciones,
         });
 
         Ok(())
     }
 
-    pub fn agregar_libro(context: Context<NuevoLibro>, nombre: String, paginas: u16) -> Result<()>{
-        let libro= Libros{
-            nombre: nombre,
-            paginas,
+    pub fn agregar_cancion(
+        context: Context<NuevaCancion>, 
+        artista: String, 
+        nombre: String, 
+        album: String, 
+        duracion: u16
+    ) -> Result<()> {
+        let cancion = Cancion {
+            artista,
+            nombre,
+            album,
+            duracion,
             disponible: true,
         };
 
-        context.accounts.biblioteca.libros.push(libro);
+        context.accounts.tienda.canciones.push(cancion);
 
         Ok(())
     }
 
-    pub fn ver_libros(context: Context<NuevoLibro>) -> Result<()>{
-        let libros = &context.accounts.biblioteca.libros;
-        msg!("La lista de libros es: {:#?}", libros);
-
+    pub fn ver_canciones(context: Context<NuevaCancion>) -> Result<()> {
+        let canciones = &context.accounts.tienda.canciones;
+        msg!("Lista de canciones: {:#?}", canciones);
         Ok(())
     }
 
-    pub fn eliminar_libro(context:Context<NuevoLibro>, nombre:String) -> Result<()> {
-        let libros = &mut context.accounts.biblioteca.libros;
+    pub fn eliminar_cancion(context: Context<NuevaCancion>, nombre: String) -> Result<()> {
+        let canciones = &mut context.accounts.tienda.canciones;
 
-        for i in 0..libros.len() {
-            if libros[i].nombre == nombre {
-                libros.remove(i);
-                msg!("Libro {} Eliminado", nombre);
-                return Ok(());
-            }
-        }
-        Err(Errores::LibroNoExixte.into())
-    }
-
-    pub fn alternar_estado(context: Context<NuevoLibro>, nombre:String) -> Result<()> {
-    let libros = &mut context.accounts.biblioteca.libros;
-
-    for i in 0..libros.len() {
-        if libros[i].nombre == nombre {
-            let estado = libros[i].disponible;
-            let nuevo_estado = !estado;
-            libros[i].disponible = nuevo_estado;
-
-            msg!("El libro: {}, ahora cuenta con una disponibilidad de: {}", nombre, nuevo_estado);
+        if let Some(pos) = canciones.iter().position(|c| c.nombre == nombre) {
+            canciones.remove(pos);
+            msg!("Canción {} eliminada", nombre);
             return Ok(());
         }
-    }
-    Err(Errores::LibroNoExixte.into())
-}
 
+        Err(Errores::CancionNoExiste.into())
+    }
+
+    pub fn alternar_estado(context: Context<NuevaCancion>, nombre: String) -> Result<()> {
+        let canciones = &mut context.accounts.tienda.canciones;
+
+        if let Some(cancion) = canciones.iter_mut().find(|c| c.nombre == nombre) {
+            cancion.disponible = !cancion.disponible;
+            msg!("La canción: {}, ahora está disponible: {}", nombre, cancion.disponible);
+            return Ok(());
+        }
+
+        Err(Errores::CancionNoExiste.into())
+    }
 }
 
 #[error_code]
 pub enum Errores {
-    #[msg("Error, Libro no existe")]
-    LibroNoExixte,
+    #[msg("Error, Canción no existe")]
+    CancionNoExiste,
 
-    #[msg("Error, no eres el propietario de la cuenta")]
+    #[msg("Error, no eres el propietario de la tienda")]
     NoEresElOwner,
 }
 
-
 #[account]
 #[derive(InitSpace)]
-pub struct Biblioteca{
+pub struct Tienda {
     owner: Pubkey,
 
     #[max_len(60)]
     nombre: String,
 
-    #[max_len(10)]
-    libros: Vec<Libros>,
-} 
+    #[max_len(50)]
+    canciones: Vec<Cancion>,
+}
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace, PartialEq, Debug)]
-pub struct Libros {
+pub struct Cancion {
+    #[max_len(60)]
+    artista: String,
+
     #[max_len(60)]
     nombre: String,
 
-    paginas: u16,
-    
+    #[max_len(60)]
+    album: String,
+
+    duracion: u16,
+
     disponible: bool,
 }
 
 #[derive(Accounts)]
-pub struct NuevaBiblioteca<'info> {
+pub struct NuevaTienda<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
     #[account(
         init,
         payer = owner,
-        space = Biblioteca::INIT_SPACE + 8,
-        seeds = [b"biblioteca", owner.key().as_ref()],
+        space = Tienda::INIT_SPACE + 8,
+        seeds = [b"tienda", owner.key().as_ref()],
         bump
     )]
-    pub biblioteca: Account<'info, Biblioteca>,
+    pub tienda: Account<'info, Tienda>,
 
     pub system_program: Program<'info, System>,
 }
 
-#[derive(Accounts)] 
-pub struct NuevoLibro<'info> {
-    pub owner: Signer<'info>, 
-    #[account(mut)] 
-    pub biblioteca: Account<'info, Biblioteca>, 
-
+#[derive(Accounts)]
+pub struct NuevaCancion<'info> {
+    pub owner: Signer<'info>,
+    #[account(mut)]
+    pub tienda: Account<'info, Tienda>,
 }
