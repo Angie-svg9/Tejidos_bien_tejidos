@@ -1,14 +1,14 @@
 // --- CONFIGURACIÓN MANUAL: CAMBIA LOS DATOS AQUÍ ---
-const ACCION = "AGREGAR"; // Opciones: "AGREGAR", "VER", "ELIMINAR"
+const ACCION = "VER"; // Opciones: "AGREGAR", "VER", "ELIMINAR, ALTERNAR"
 
 const DATOS_CANCION = {
-  artista: "Olivia Rodrigo",
-  nombre: "Vampire",
-  album: "GUTS",
-  duracion: 339
+  artista: "Jackson Wang",
+  nombre: "LMLY",
+  album: "LMLY",
+  duracion: 730
 };
 
-const NOMBRE_PARA_ELIMINAR = "canción"; // Nombre exacto para borrar
+const NOMBRE_OBJETIVO = "Vampire"; // Nombre exacto para borrar
 // ---------------------------------------------------
 
 const [tiendaPda] = web3.PublicKey.findProgramAddressSync(
@@ -46,14 +46,25 @@ async function ejecutarCliente() {
       });
 
     } else if (ACCION === "ELIMINAR") {
-      console.log(`Eliminando: ${NOMBRE_PARA_ELIMINAR}...`);
+      console.log(`Eliminando: ${NOMBRE_OBJETIVO}...`);
       const tx = await pg.program.methods
-        .eliminarCancion(NOMBRE_PARA_ELIMINAR)
+        .eliminarCancion(NOMBRE_OBJETIVO)
         .accounts({
           owner: pg.wallet.publicKey,
           tienda: tiendaPda,
         }).rpc();
       console.log(`✅ Eliminada. TX: ${tx}`);
+
+    } else if (ACCION === "ALTERNAR") {
+      console.log(`Cambiando disponibilidad de: "${NOMBRE_OBJETIVO}"...`);
+      const tx = await pg.program.methods
+        .alternarEstado(NOMBRE_OBJETIVO) // Llama a alternar_estado en Rust
+        .accounts({
+          owner: pg.wallet.publicKey,
+          tienda: tiendaPda,
+        }).rpc();
+      console.log(`✅ Estado actualizado. TX: ${tx}`);
+
     }
 
   } catch (e) {
